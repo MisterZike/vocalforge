@@ -34,8 +34,19 @@ const VOWELS = /^(AA|AE|AH|AO|AW|AX|AY|EH|ER|EY|IH|IY|OW|OY|UH|UW)$/;
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const midiName = v => NOTE_NAMES[((Math.round(v) % 12) + 12) % 12] + (Math.floor(v / 12) - 1);
 
+/* Presets live on disk when you run VocalForge locally. A hosted deployment
+   has no writable filesystem, so they go to this browser instead. */
+const LS_PRESETS = 'vf.presets';
+const slug = n => (n.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'preset');
+function localPresets() {
+  try { return JSON.parse(localStorage.getItem(LS_PRESETS) || '[]'); } catch { return []; }
+}
+function writeLocalPresets(list) {
+  try { localStorage.setItem(LS_PRESETS, JSON.stringify(list)); } catch {}
+}
+
 const S = {
-  schema: [], byKey: {}, defaults: {}, params: {},
+  schema: [], byKey: {}, defaults: {}, params: {}, stateless: false,
   presets: [], activePreset: null, presetMacros: null,
   align: null, render: null, rendering: false, dirty: true, queued: false,
   drawerRows: {},
@@ -474,11 +485,26 @@ async function doRender() {
   progress('done');
   S.render = r; S.dirty = false;
   if (r.pitch) { S.align = { ...r, lead: S.align?.lead ?? 0 }; Mel.setAlign(S.align, false); }
-  $('#audio').src = r.url;
+  setAudio(r);
   drawWave();
   Screen.idle();
   if (S.queued) { S.queued = false; scheduleRender(); }
   else if (S.autoplay) { S.autoplay = false; $('#audio').play(); }
+}
+
+let blobUrl = null;
+function setAudio(r) {
+  const a = $('#audio');
+  if (r.audio) {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    const bin = atob(r.audio);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    blobUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    a.src = blobUrl;
+  } else {
+    a.src = r.url;
+  }
 }
 
 /* ================================================================ waveform */
@@ -579,13 +605,34 @@ async function loadPreset(pr, opts = {}) {
 async function savePreset() {
   const name = $('#preset-name').value.trim();
   if (!name) { $('#preset-name').focus(); Screen.error('Name the voice first'); setTimeout(() => Screen.idle(), 1800); return; }
+
+  if (S.stateless) {
+    const changed = Object.fromEntries(Object.entries(S.params)
+      .filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(S.defaults[k])));
+    const pr = { id: slug(name), name, description: 'Saved in this browser',
+                 text: $('#text').value, params: changed,
+                 macros: Macros.values, source: 'user' };
+    writeLocalPresets([pr, ...localPresets().filter(x => x.id !== pr.id)]);
+    S.presets = [...localPresets(), ...S.factory];
+    S.activePreset = pr.id;
+    renderPresets(); Screen.idle();
+    return;
+  }
+
   const r = await api('/api/preset', {
     name, params: S.params, text: $('#text').value, macros: Macros.values });
   if (r.error) return Screen.error(r.error);
   S.presets = r.presets; S.activePreset = r.id;
   renderPresets(); Screen.idle();
 }
+
 async function deletePreset(name) {
+  if (S.stateless) {
+    writeLocalPresets(localPresets().filter(x => x.id !== slug(name)));
+    S.presets = [...localPresets(), ...S.factory];
+    renderPresets();
+    return;
+  }
   const r = await api('/api/preset/delete', { name });
   S.presets = r.presets; renderPresets();
 }
@@ -685,8 +732,12 @@ async function boot() {
   $('#btn-drawer .count').textContent =
     s.schema.filter(e => !TOOLBAR_KEYS.has(e.key)).length;
 
+  const env = await api('/api/env');
+  S.stateless = !!env.stateless;
+
   const p = await api('/api/presets');
-  S.presets = p.presets || [];
+  S.factory = (p.presets || []).filter(x => x.source === 'factory');
+  S.presets = S.stateless ? [...localPresets(), ...S.factory] : (p.presets || []);
 
   Mel.mount($('#roll-host'), {
     onChange: text => {
@@ -769,7 +820,7 @@ function bindUI() {
   };
   $('#btn-dl').onclick = () => {
     if (!S.render) return;
-    const a = el('a', { href: S.render.url, download: 'vocalforge.wav' });
+    const a = el('a', { href: blobUrl || S.render.url, download: 'vocalforge.wav' });
     document.body.append(a); a.click(); a.remove();
   };
 

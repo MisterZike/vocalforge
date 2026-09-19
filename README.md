@@ -246,6 +246,33 @@ of the same line to layer.
 
 ---
 
+## Deploying it
+
+The repo is set up for Vercel (Hobby works). `api/index.py` re-uses the same
+request handler the local server uses, `public/` is served statically, and
+`vercel.json` rewrites `/api/*` onto the function.
+
+1. <https://vercel.com/new> → import this repository
+2. Framework preset: **Other**. Leave build and output settings empty.
+3. Deploy.
+
+**A hosted deployment is not identical to running it locally.** Serverless
+functions are stateless and have no writable disk, so two things change, and
+the app detects this at boot via `/api/env`:
+
+| | local | hosted |
+|---|---|---|
+| audio | streamed from `/audio/<id>.wav` | returned inline, played from a blob URL |
+| user presets | `~/.config/vocalforge/presets/*.json` | your browser's localStorage |
+
+Factory presets, rendering, the knobs, the roll and export all behave the same.
+
+Worth knowing before you rely on it: numpy and scipy come to ~150 MB, which
+fits inside the 250 MB function limit but makes cold starts slow — the first
+render after an idle period can take several seconds. Renders themselves are
+0.1–1.5 s. `maxDuration` is set to 60 s in `vercel.json` to leave headroom.
+Running it locally stays the better experience; hosting is for sharing.
+
 ## Layout
 
 ```
@@ -263,10 +290,12 @@ vocalforge/
   render.py      the full pipeline
   server.py      local web UI
   cli.py         command line
-web/             theme.js  palette bridge for the canvases
+api/index.py     Vercel serverless entry point
+public/          theme.js  palette bridge for the canvases
                  macros.js knobs and their ten animated graphics
                  melody.js piano roll + alignment lanes
                  app.js    screen, drawer, toolbar, transport
+vercel.json      routes and function limits
 out/             rendered samples
 ```
 

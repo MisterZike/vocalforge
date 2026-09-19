@@ -5,6 +5,7 @@ nothing beyond numpy and scipy.  Binds to localhost by default.
 """
 from __future__ import annotations
 
+import base64
 import io
 import json
 import threading
@@ -21,10 +22,15 @@ import numpy as np
 
 from . import audio, g2p, macros, params, presets, render
 
-WEB = Path(__file__).resolve().parent.parent / "web"
+WEB = Path(__file__).resolve().parent.parent / "public"
 MAX_CACHED = 24
 _cache: OrderedDict[str, tuple[bytes, float]] = OrderedDict()
 _lock = threading.Lock()
+
+# Set by the serverless entry point. Functions are stateless and get no shared
+# filesystem, so the audio is returned inline and user presets live in the
+# browser rather than on disk.
+STATELESS = False
 
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
@@ -111,6 +117,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"schema": params.describe(),
                                "groups": params.GROUPS,
                                "defaults": params.defaults()})
+        if path == "/api/env":
+            return self._json({"stateless": STATELESS,
+                               "can_save_presets": not STATELESS})
         if path == "/api/macros":
             return self._json({"macros": macros.describe()})
         if path == "/api/presets":
@@ -135,6 +144,10 @@ class Handler(BaseHTTPRequestHandler):
                     str(body.get("text") or "hello world"),
                     body.get("params") or {}))
             if u.path == "/api/preset":
+                if STATELESS:
+                    return self._json(
+                        {"error": "This deployment cannot write presets; "
+                                  "they are saved in your browser instead."}, 501)
                 name = str(body.get("name", "")).strip()
                 if not name:
                     return self._json({"error": "a name is required"}, 400)
@@ -146,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
                                    "id": presets.slugify(name),
                                    "presets": presets.list_presets()})
             if u.path == "/api/preset/delete":
+                if STATELESS:
+                    return self._json({"error": "read-only deployment"}, 501)
                 ok = presets.delete(str(body.get("name", "")))
                 return self._json({"ok": ok, "presets": presets.list_presets()})
             return self._json({"error": "unknown endpoint"}, 404)
@@ -165,11 +180,13 @@ class Handler(BaseHTTPRequestHandler):
             wav = tmp.read_bytes()
         finally:
             tmp.unlink(missing_ok=True)
-        key = _store(wav)
         info["waveform"] = render.waveform_preview(x)
         info["bytes"] = len(wav)
         info["total_time"] = round(time.time() - t0, 3)
-        info["url"] = f"/audio/{key}.wav"
+        if STATELESS:
+            info["audio"] = base64.b64encode(wav).decode("ascii")
+        else:
+            info["url"] = f"/audio/{_store(wav)}.wav"
         return self._json(info)
 
 
