@@ -3,11 +3,9 @@
 __pycache__/
 *.py[cod]
 
-# rendered audio
-out/*.wav
-out/*.mp3
-out/*.flac
-out/*.ogg
+# rendered audio and test captures
+out/*
+!out/.gitkeep
 
 # vercel
 .vercel/
