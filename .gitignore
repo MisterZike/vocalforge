@@ -1,0 +1,17 @@
+# local python env
+.venv/
+__pycache__/
+*.py[cod]
+
+# rendered audio
+out/*.wav
+out/*.mp3
+out/*.flac
+out/*.ogg
+
+# vercel
+.vercel/
+node_modules/
+
+# os
+.DS_Store

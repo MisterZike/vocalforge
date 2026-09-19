@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VocalForge</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230B0B0A'/><rect x='9' y='6' width='14' height='14' fill='%23F4F1EA'/><rect x='14' y='9' width='4' height='8' fill='%230B0B0A'/></svg>">
+</head>
+<body>
+
+<!-- one clip path, shared by all ten knob graphics -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><clipPath id="kwell"><circle cx="37" cy="37" r="23"/></clipPath></defs>
+</svg>
+
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <svg class="brand-mark" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+        <rect width="14" height="14" fill="var(--vf-bone)"/>
+        <rect x="5" y="3" width="4" height="8" fill="var(--vf-recess)"/>
+      </svg>
+      <span class="brand-word">Vocalforge</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <label class="latch" id="live-latch" title="Re-render automatically as you change things">
+      <input type="checkbox" id="live"><i class="led"></i>Live
+    </label>
+
+    <span id="hdr-extra" style="display:contents">
+      <input type="text" id="preset-name" class="field" placeholder="name this voice"
+             aria-label="Preset name">
+      <button class="btn" id="btn-save" title="Save these settings as a preset (Ctrl+S)">Save</button>
+      <button class="btn" id="btn-reset" title="Reset parameters to defaults — your words and melody are kept while KEEP WORDS is on">Reset</button>
+      <span class="divider"></span>
+    </span>
+
+    <button class="btn" id="btn-drawer" title="All parameters (Ctrl+K)">
+      Parameters<span class="count">0</span><span class="dot"></span>
+    </button>
+  </header>
+
+  <div id="progress" aria-hidden="true"><i></i></div>
+
+  <div id="lyric-band">
+    <input type="text" id="text" placeholder="type a line…" spellcheck="false"
+           aria-label="Lyric"
+           title="Wrap phonemes in slashes to spell a word yourself — /M IY K UW/. Commas and full stops become breaths.">
+  </div>
+
+  <div id="phon" aria-label="Phonemes"></div>
+
+  <div id="faceplate">
+    <div id="screen">
+      <div class="sc-head"><div class="sc-name">—</div><div class="sc-val"></div></div>
+      <div class="sc-meter"><i></i></div>
+      <div class="sc-ends"><span class="lo"></span><i></i><span class="hi"></span></div>
+      <div class="sc-blurb"></div>
+      <div class="sc-rows"></div>
+      <div class="sc-foot"><canvas class="sc-scope"></canvas></div>
+    </div>
+
+    <div class="k-side">
+      <div id="knobs"></div>
+      <div class="k-tools">
+        <button class="btn sm bare" id="btn-random" title="Randomise all ten knobs">Random</button>
+        <button class="btn sm bare" id="btn-knobs-reset" title="Return every knob to where the preset put it">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="presets">
+    <span id="keep-wrap">
+      <label class="latch" id="keep-latch"
+             title="On: loading a preset changes the voice only and leaves your lyric, melody, tempo and key alone.&#10;Off: presets replace everything.&#10;&#10;Alt-click a preset to load its demo line either way.">
+        <input type="checkbox" id="keep-content" checked><i class="led"></i>
+        <span id="keep-text">Keep words</span>
+      </label>
+    </span>
+  </div>
+
+  <div id="roll-tools"></div>
+
+  <div id="roll-region"><div class="roll-wrap" id="roll-host"></div></div>
+
+  <footer>
+    <button id="btn-render" title="Render (Ctrl+Enter)">Render</button>
+    <button id="btn-play" title="Play / pause (Space)">&#9654;</button>
+    <canvas id="wave" aria-label="Waveform"></canvas>
+    <div id="time">0:00.0 / 0:00.0</div>
+    <button class="btn bare" id="btn-dl" title="Download WAV" style="height:32px">&#11015;</button>
+  </footer>
+
+</div>
+
+<aside id="drawer" aria-label="All parameters" aria-hidden="true">
+  <div class="dr-head">
+    <span class="dr-title">Parameters</span>
+    <div class="spacer"></div>
+    <label class="latch" id="changed-latch" style="height:22px;font-size:9px">
+      <input type="checkbox" id="changed-only"><i class="led"></i>Changed only
+    </label>
+    <button class="btn sm bare" id="dr-close" aria-label="Close">&#10005;</button>
+  </div>
+  <div class="dr-search">
+    <input type="text" id="dr-q" placeholder="search parameters" spellcheck="false" aria-label="Search parameters">
+  </div>
+  <div class="dr-list" id="dr-list"></div>
+  <div class="dr-help" id="dr-help"><span class="txt">Hover a parameter for what it does.</span><span class="key"></span></div>
+</aside>
+
+<audio id="audio"></audio>
+<script src="theme.js"></script>
+<script src="macros.js"></script>
+<script src="melody.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

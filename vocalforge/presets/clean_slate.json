@@ -1,0 +1,9 @@
+{
+  "description": "Everything at its default, effects bypassed. The neutral starting point for building your own voice.",
+  "name": "Clean Slate",
+  "params": {
+    "pitch.melody": "C4 E4 G4"
+  },
+  "text": "hello world",
+  "version": 1
+}

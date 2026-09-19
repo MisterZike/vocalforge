@@ -1,0 +1,29 @@
+{
+  "description": "Very small vocal tract with formants pushed high. Cartoonish top-line hook voice.",
+  "name": "Sprite",
+  "params": {
+    "art.glide": 18,
+    "art.speed": 1.2,
+    "comp.ratio": 4,
+    "deess.amount": 0.35,
+    "dly.mix": 0.18,
+    "eq.high_gain": 2,
+    "eq.hp": 250,
+    "pitch.bpm": 150,
+    "pitch.melody": "A5 A5 C6 A5 F5",
+    "pitch.portamento": 15,
+    "pitch.quantize": 1.0,
+    "pitch.root": 84,
+    "pitch.vibrato_depth": 0.2,
+    "rev.mix": 0.2,
+    "st.width": 1.1,
+    "voice.breathiness": 0.05,
+    "voice.effort": 0.7,
+    "voice.formant_q": 1.5,
+    "voice.formant_shift": 5.0,
+    "voice.tilt": 4.0,
+    "voice.tract_length": 0.62
+  },
+  "text": "come and play with me",
+  "version": 1
+}
